@@ -348,7 +348,7 @@ static lval* builtin_op(lval* a, char* op) {
 static lval* builtin_head(lval* a) {
   // Check if argument is a single one
   LASSERT_NUM_ARGS(a, a->count, 1,
-                   "Function \"head\" passed too many arguments.");
+                   "Function \"head\" passed incorrect number of arguments.");
 
   // Check if single argument is a Q-Expression
   LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
@@ -371,7 +371,7 @@ static lval* builtin_head(lval* a) {
 static lval* builtin_tail(lval* a) {
   // Check if argument is a single one
   LASSERT_NUM_ARGS(a, a->count, 1,
-                   "Function \"tail\" passed too many arguments.");
+                   "Function \"tail\" passed incorrect number of arguments.");
 
   // Check if single argument is a Q-Expression
   LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
@@ -400,7 +400,7 @@ static lval* lval_eval(lval* v);
 static lval* builtin_eval(lval* a) {
   // Check if argument is a single one
   LASSERT_NUM_ARGS(a, a->count, 1,
-                   "Function \"eval\" passed too many arguments.");
+                   "Function \"eval\" passed incorrect number of arguments.");
 
   // Check if single argument is a Q-Expression
   LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
@@ -437,7 +437,7 @@ static lval* builtin_join(lval* a) {
 static lval* builtin_cons(lval* a) {
   // Check if the number of arguments is two
   LASSERT_NUM_ARGS(a, a->count, 2,
-                   "Function \"cons\" passed incorrect numbers of arguments.");
+                   "Function \"cons\" passed incorrect number of arguments.");
 
   // Take the first argument
   lval* x = a->cell[0];
@@ -467,6 +467,20 @@ static lval* builtin_cons(lval* a) {
   return r;
 }
 
+static lval* builtin_len(lval* a) {
+  // Check if argument is a single one
+  LASSERT_NUM_ARGS(a, a->count, 1,
+                   "Function \"len\" passed incorrect number of arguments.");
+
+  // Check if argument is a Q-Expression
+  LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
+          "Function \"len\" passed incorrect type.");
+
+  lval* r = lval_num(a->cell[0]->count);
+
+  return r;
+}
+
 static lval* builtin(lval* a, char* func) {
   if (strcmp("list", func) == 0) {
     return builtin_list(a);
@@ -490,6 +504,10 @@ static lval* builtin(lval* a, char* func) {
 
   if (strcmp("cons", func) == 0) {
     return builtin_cons(a);
+  }
+
+  if (strcmp("len", func) == 0) {
+    return builtin_len(a);
   }
 
   if (strstr("+-/*", func)) {
@@ -561,18 +579,19 @@ int main(int argc, char** argv) {
   puts("Noodle Version 0.0.0.0.1");
   puts("Press Ctrl+C to Exit\n");
 
-  mpca_lang(MPCA_LANG_DEFAULT,
-            "									\
+  mpca_lang(
+      MPCA_LANG_DEFAULT,
+      "										\
 			number		: /-?[0-9]+/ ;					\
 			symbol		: \"list\" | \"head\" | \"tail\"		\
-					| \"join\" | \"eval\" | \"cons\"		\
+					| \"join\" | \"eval\" | \"cons\" | \"len\"	\
 					| '+' | '-' | '*' | '/' ;			\
 			sexpr		: '(' <expr>* ')' ; 				\
 			qexpr		: '{' <expr>* '}' ;				\
 			expr		: <number> | <symbol> | <sexpr> | <qexpr> ;	\
 			noodle		: /^/ <expr>* /$/ ;				\
 		",
-            Number, Symbol, Sexpr, Qexpr, Expr, Noodle);
+      Number, Symbol, Sexpr, Qexpr, Expr, Noodle);
 
   while (1) {
     char* input = readline("noodle> ");
