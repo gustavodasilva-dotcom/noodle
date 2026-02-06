@@ -655,6 +655,36 @@ static lval* builtin_init(lenv* e, lval* a) {
   return x;
 }
 
+static lval* builtin_def(lenv* e, lval* v) {
+  // Check if argument is a Q-Expression
+  LASSERT(v, v->cell[0]->type == LVAL_QEXPR,
+          "Function \"def\" passed incorrect type. Expected Q-Expression.");
+
+  // First argument is the symbol list
+  lval* syms = v->cell[0];
+
+  // Ensure all elements of first list are symbols
+  for (int i = 0; i < syms->count; i++) {
+    LASSERT(v, syms->cell[i]->type == LVAL_SYM,
+            "Function \"def\" cannot define non-symbol.");
+  }
+
+  // Check correct number of symbols and values
+  // (the first argument is the symbol list)
+  LASSERT(v, syms->count == v->count - 1,
+          "Function \"def\" cannot define incorrect "
+          "number of values to symbols.");
+
+  // Assign copies of values to symbols
+  for (int i = 0; i < syms->count; i++) {
+    lenv_put(e, syms->cell[i], v->cell[i + 1]);
+  }
+
+  lval_del(v);
+
+  return lval_sexpr();
+}
+
 static lval* lval_eval_sexpr(lenv* e, lval* v) {
   // Evaluate children
   for (int i = 0; i < v->count; i++) {
@@ -733,6 +763,7 @@ void static lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "cons", builtin_cons);
   lenv_add_builtin(e, "len", builtin_len);
   lenv_add_builtin(e, "init", builtin_init);
+  lenv_add_builtin(e, "def", builtin_def);
 
   // Mathematical functions
   lenv_add_builtin(e, "+", builtin_add);
