@@ -747,10 +747,38 @@ static lval* builtin_def(lenv* e, lval* a) {
 }
 
 static lval* builtin_exit(lenv* e, lval* a) {
-  // Delete value
+  // Free pointers
+  lenv_del(e);
   lval_del(a);
 
   exit(EXIT_SUCCESS);
+}
+
+static lval* builtin_env(lenv* e, lval* a) {
+  // Check if argument is a single one
+  LASSERT_NUM_ARGS(a, a->count, 1,
+                   "Function \"env\" passed incorrect number of arguments. "
+                   "Got %i, but expected %i.",
+                   a->count, 1);
+
+  // Check if argument is a S-Expression
+  LASSERT(a, a->cell[0]->type == LVAL_SEXPR,
+          "Function \"env\" passed incorrect type for argument 0. "
+          "Got %s, but expected %s.",
+          ltype_name(a->cell[0]->type), ltype_name(LVAL_SEXPR));
+
+  // Print all variables in the environment
+  for (int i = 0; i < e->count; i++) {
+    printf("%s\t", e->syms[i]);
+
+    lval_print(e->vals[i]);
+
+    putchar('\n');
+  }
+
+  lval_del(a);
+
+  return lval_sexpr();
 }
 
 static lval* lval_eval_sexpr(lenv* e, lval* v) {
@@ -833,6 +861,7 @@ void static lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "init", builtin_init);
   lenv_add_builtin(e, "def", builtin_def);
   lenv_add_builtin(e, "exit", builtin_exit);
+  lenv_add_builtin(e, "env", builtin_env);
 
   // Mathematical functions
   lenv_add_builtin(e, "+", builtin_add);
