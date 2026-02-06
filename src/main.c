@@ -746,6 +746,13 @@ static lval* builtin_def(lenv* e, lval* a) {
   return lval_sexpr();
 }
 
+static lval* builtin_exit(lenv* e, lval* a) {
+  // Delete value
+  lval_del(a);
+
+  exit(EXIT_SUCCESS);
+}
+
 static lval* lval_eval_sexpr(lenv* e, lval* v) {
   // Evaluate children
   for (int i = 0; i < v->count; i++) {
@@ -825,6 +832,7 @@ void static lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "len", builtin_len);
   lenv_add_builtin(e, "init", builtin_init);
   lenv_add_builtin(e, "def", builtin_def);
+  lenv_add_builtin(e, "exit", builtin_exit);
 
   // Mathematical functions
   lenv_add_builtin(e, "+", builtin_add);
