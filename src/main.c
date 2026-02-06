@@ -59,7 +59,15 @@ void add_history(char* unused) {}
 
 // Lisp value
 
-enum { LVAL_ERR, LVAL_NUM, LVAL_SYM, LVAL_FUN, LVAL_SEXPR, LVAL_QEXPR };
+enum {
+  LVAL_ERR,
+  LVAL_NUM,
+  LVAL_SYM,
+  LVAL_FUN,
+  LVAL_SEXPR,
+  LVAL_QEXPR,
+  LVAL_EXIT
+};
 
 // Forward declarations
 
@@ -103,6 +111,8 @@ static char* ltype_name(int t) {
       return "S-Expression";
     case LVAL_QEXPR:
       return "Q-Expression";
+    case LVAL_EXIT:
+      return "Exit";
     default:
       return "unknown";
   }
@@ -170,6 +180,14 @@ static lval* lval_qexpr(void) {
   v->type = LVAL_QEXPR;
   v->count = 0;
   v->cell = NULL;
+
+  return v;
+}
+
+static lval* lval_exit(int i) {
+  lval* v = malloc(sizeof(lval));
+  v->type = LVAL_EXIT;
+  v->num = i;
 
   return v;
 }
@@ -747,11 +765,32 @@ static lval* builtin_def(lenv* e, lval* a) {
 }
 
 static lval* builtin_exit(lenv* e, lval* a) {
-  // Free pointers
-  lenv_del(e);
+  // Check if argument is a single one
+  LASSERT_NUM_ARGS(a, a->count, 1,
+                   "Function \"exit\" passed incorrect number of arguments. "
+                   "Got %i, but expected %i.",
+                   a->count, 1);
+
+  // Check if argument is a valid type
+  LASSERT(a, a->cell[0]->type == LVAL_NUM || a->cell[0]->type == LVAL_SEXPR,
+          "Function \"exit\" passed incorrect type for argument 0. "
+          "Got %s, but expected %s or %s.",
+          ltype_name(a->cell[0]->type), ltype_name(LVAL_NUM),
+          ltype_name(LVAL_SEXPR));
+
+  int i = 0;
+
+  // If argument is a number, use it as exit code
+  if (a->cell[0]->type == LVAL_NUM) {
+    i = a->cell[0]->num;
+  }
+
+  // Create exit lval with exit code
+  lval* x = lval_exit(i);
+
   lval_del(a);
 
-  exit(EXIT_SUCCESS);
+  return x;
 }
 
 static lval* builtin_env(lenv* e, lval* a) {
@@ -896,7 +935,11 @@ int main(int argc, char** argv) {
   lenv* e = lenv_new();
   lenv_add_builtins(e);
 
-  while (1) {
+  int status = 0;
+  
+  int running = 1;
+
+  while (running) {
     char* input = readline("noodle> ");
 
     add_history(input);
@@ -905,7 +948,15 @@ int main(int argc, char** argv) {
 
     if (mpc_parse("<stdin>", input, Noodle, &r)) {
       lval* x = lval_eval(e, lval_read(r.output));
-      lval_println(x);
+
+      if (x->type == LVAL_EXIT) {
+        status = x->num;
+
+        running = 0;
+      } else {
+        lval_println(x);
+      }
+
       lval_del(x);
 
       mpc_ast_delete(r.output);
@@ -921,5 +972,5 @@ int main(int argc, char** argv) {
 
   mpc_cleanup(6, Number, Symbol, Sexpr, Qexpr, Expr, Noodle);
 
-  return 0;
+  return status;
 }
