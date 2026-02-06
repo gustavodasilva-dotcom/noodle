@@ -36,22 +36,25 @@ void add_history(char* unused) {}
 
 #endif
 
-#define LASSERT(args, cond, err) \
-  if (!(cond)) {                 \
-    lval_del(args);              \
-    return lval_err(err);        \
+#define LASSERT(args, cond, fmt, ...)         \
+  if (!(cond)) {                              \
+    lval* err = lval_err(fmt, ##__VA_ARGS__); \
+    lval_del(args);                           \
+    return err;                               \
   }
 
-#define LASSERT_NUM_ARGS(args, count, exp, err) \
-  if (count != exp) {                           \
-    lval_del(args);                             \
-    return lval_err(err);                       \
+#define LASSERT_NUM_ARGS(args, count, exp, fmt, ...) \
+  if (count != exp) {                                \
+    lval* err = lval_err(fmt, ##__VA_ARGS__);        \
+    lval_del(args);                                  \
+    return err;                                      \
   }
 
-#define LASSERT_EMPTY(args, count, err) \
-  if (count == 0) {                     \
-    lval_del(args);                     \
-    return lval_err(err);               \
+#define LASSERT_EMPTY(args, count, fmt, ...)  \
+  if (count == 0) {                           \
+    lval* err = lval_err(fmt, ##__VA_ARGS__); \
+    lval_del(args);                           \
+    return err;                               \
   }
 
 // Lisp value
@@ -86,6 +89,25 @@ struct lenv {
   lval** vals;
 };
 
+static char* ltype_name(int t) {
+  switch (t) {
+    case LVAL_FUN:
+      return "Function";
+    case LVAL_NUM:
+      return "Number";
+    case LVAL_ERR:
+      return "Error";
+    case LVAL_SYM:
+      return "Symbol";
+    case LVAL_SEXPR:
+      return "S-Expression";
+    case LVAL_QEXPR:
+      return "Q-Expression";
+    default:
+      return "unknown";
+  }
+}
+
 static lval* lval_num(long x) {
   lval* v = malloc(sizeof(lval));
   v->type = LVAL_NUM;
@@ -94,11 +116,25 @@ static lval* lval_num(long x) {
   return v;
 }
 
-static lval* lval_err(char* m) {
+static lval* lval_err(char* fmt, ...) {
   lval* v = malloc(sizeof(lval));
   v->type = LVAL_ERR;
-  v->err = malloc(strlen(m) + 1);
-  strcpy(v->err, m);
+
+  // Create a va list and initialize it
+  va_list va;
+  va_start(va, fmt);
+
+  // Allocate 512 bytes of space
+  v->err = malloc(512);
+
+  // printf the error string with a maximum of 511 characters
+  vsnprintf(v->err, 511, fmt, va);
+
+  // Reallocate to the number of bytes actually used
+  v->err = realloc(v->err, strlen(v->err) + 1);
+
+  // Clean up va list
+  va_end(va);
 
   return v;
 }
@@ -393,7 +429,7 @@ static lval* lenv_get(lenv* e, lval* k) {
     }
   }
 
-  return lval_err("Unbound symbol.");
+  return lval_err("Unbound symbol \"%s\".", k->sym);
 }
 
 /// @brief Assigns a value to a variable, overriding it or creating it,
@@ -429,10 +465,9 @@ static void lenv_put(lenv* e, lval* k, lval* v) {
 static lval* builtin_op(lenv* e, lval* a, char* op) {
   // Ensure all arguments are numbers
   for (int i = 0; i < a->count; i++) {
-    if (a->cell[i]->type != LVAL_NUM) {
-      lval_del(a);
-      return lval_err("Cannot operate on non-number.");
-    }
+    LASSERT(a, a->cell[i]->type == LVAL_NUM,
+            "Cannot operate on non-number. Got %s.",
+            ltype_name(a->cell[i]->type));
   }
 
   // Pop the first element
@@ -490,18 +525,21 @@ static lval* builtin_div(lenv* e, lval* a) { return builtin_op(e, a, "/"); }
 
 static lval* builtin_head(lenv* e, lval* a) {
   // Check if argument is a single one
-  LASSERT_NUM_ARGS(
-      a, a->count, 1,
-      "Function \"head\" passed incorrect number of arguments. Expected 1.");
+  LASSERT_NUM_ARGS(a, a->count, 1,
+                   "Function \"head\" passed incorrect number of arguments. "
+                   "Got %i, but expected %i.",
+                   a->count, 1);
 
   // Check if single argument is a Q-Expression
   LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
-          "Function \"head\" passed incorrect types. Expected Q-Expression.");
+          "Function \"head\" passed incorrect type for argument 0. "
+          "Got %s, but expected %s.",
+          ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
 
   // Check if single argument is not empty
-  LASSERT_EMPTY(
-      a, a->cell[0]->count,
-      "Function \"head\" passed {}. Expected non-empty Q-Expression.");
+  LASSERT_EMPTY(a, a->cell[0]->count,
+                "Function \"head\" passed {}. Expected non-empty %s.",
+                ltype_name(LVAL_QEXPR));
 
   // Otherwise take first (single) argument
   lval* v = lval_take(a, 0);
@@ -516,18 +554,21 @@ static lval* builtin_head(lenv* e, lval* a) {
 
 static lval* builtin_tail(lenv* e, lval* a) {
   // Check if argument is a single one
-  LASSERT_NUM_ARGS(
-      a, a->count, 1,
-      "Function \"tail\" passed incorrect number of arguments. Expected 1.");
+  LASSERT_NUM_ARGS(a, a->count, 1,
+                   "Function \"tail\" passed incorrect number of arguments. "
+                   "Got %i, but expected %i.",
+                   a->count, 1);
 
   // Check if single argument is a Q-Expression
   LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
-          "Function \"tail\" passed incorrect types. Expected Q-Expression.");
+          "Function \"tail\" passed incorrect type for argument 0. "
+          "Got %s, but expected %s.",
+          ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
 
   // Check if single argument is not empty
-  LASSERT_EMPTY(
-      a, a->cell[0]->count,
-      "Function \"tail\" passed {}. Expected non-empty Q-Expression.");
+  LASSERT_EMPTY(a, a->cell[0]->count,
+                "Function \"tail\" passed {}. Expected non-empty %s.",
+                ltype_name(LVAL_QEXPR));
 
   // Otherwise take first (single) argument
   lval* v = lval_take(a, 0);
@@ -548,13 +589,16 @@ static lval* lval_eval(lenv* e, lval* v);
 
 static lval* builtin_eval(lenv* e, lval* a) {
   // Check if argument is a single one
-  LASSERT_NUM_ARGS(
-      a, a->count, 1,
-      "Function \"eval\" passed incorrect number of arguments. Expected 1.");
+  LASSERT_NUM_ARGS(a, a->count, 1,
+                   "Function \"eval\" passed incorrect number of arguments. "
+                   "Got %i, but expected %i.",
+                   a->count, 1);
 
   // Check if single argument is a Q-Expression
   LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
-          "Function \"eval\" passed incorrect type. Expected Q-Expression.");
+          "Function \"eval\" passed incorrect type for argument 0. "
+          "Got %s, but expected %s.",
+          ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
 
   // Otherwise take first (single) argument
   lval* x = lval_take(a, 0);
@@ -567,7 +611,9 @@ static lval* builtin_join(lenv* e, lval* a) {
   // Check if all arguments are Q-Expressions
   for (int i = 0; i < a->count; i++) {
     LASSERT(a, a->cell[i]->type == LVAL_QEXPR,
-            "Function \"join\" passed incorrect type. Expected Q-Expression.");
+            "Function \"join\" passed incorrect type for argument %i. "
+            "Got %s, but expected %s.",
+            i, ltype_name(a->cell[i]->type), ltype_name(LVAL_QEXPR));
   }
 
   // Take first argument
@@ -586,21 +632,25 @@ static lval* builtin_join(lenv* e, lval* a) {
 
 static lval* builtin_cons(lenv* e, lval* a) {
   // Check if the number of arguments is two
-  LASSERT_NUM_ARGS(
-      a, a->count, 2,
-      "Function \"cons\" passed incorrect number of arguments. Expected 1.");
+  LASSERT_NUM_ARGS(a, a->count, 2,
+                   "Function \"cons\" passed incorrect number of arguments. "
+                   "Got %i, but expected %i.",
+                   a->count, 2);
 
   // Check if the second argument is a valid type
   LASSERT(a,
           a->cell[0]->type == LVAL_SEXPR || a->cell[0]->type == LVAL_QEXPR ||
               a->cell[0]->type == LVAL_NUM,
-          "Function \"cons\" passed incorrect type for the first argument. "
-          "Expected S-Expression, Q-Expression or Number.");
+          "Function \"cons\" passed incorrect type for argument 0. "
+          "Got %s, but expected %s, %s or %s.",
+          ltype_name(a->cell[0]->type), ltype_name(LVAL_SEXPR),
+          ltype_name(LVAL_QEXPR), ltype_name(LVAL_NUM));
 
   // Check if the second argument is a Q-Expression
   LASSERT(a, a->cell[1]->type == LVAL_QEXPR,
-          "Function \"cons\" passed incorrect type for the second argument. "
-          "Expected Q-Expression.");
+          "Function \"cons\" passed incorrect type for argument 1. "
+          "Got %s, but expected %s.",
+          ltype_name(a->cell[1]->type), ltype_name(LVAL_QEXPR));
 
   // Create result Q-Expression
   lval* r = lval_qexpr();
@@ -616,13 +666,16 @@ static lval* builtin_cons(lenv* e, lval* a) {
 
 static lval* builtin_len(lenv* e, lval* a) {
   // Check if argument is a single one
-  LASSERT_NUM_ARGS(
-      a, a->count, 1,
-      "Function \"len\" passed incorrect number of arguments. Expected 1.");
+  LASSERT_NUM_ARGS(a, a->count, 1,
+                   "Function \"len\" passed incorrect number of arguments. "
+                   "Got %i, but expected %i.",
+                   a->count, 1);
 
   // Check if argument is a Q-Expression
   LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
-          "Function \"len\" passed incorrect type. Expected Q-Expression.");
+          "Function \"len\" passed incorrect type for argument 0. "
+          "Got %s, but expected %s.",
+          ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
 
   // Return a number containing the amount of elements
   lval* r = lval_num(a->cell[0]->count);
@@ -632,18 +685,21 @@ static lval* builtin_len(lenv* e, lval* a) {
 
 static lval* builtin_init(lenv* e, lval* a) {
   // Check if argument is a single one
-  LASSERT_NUM_ARGS(
-      a, a->count, 1,
-      "Function \"init\" passed incorrect number of arguments. Expected 1.");
+  LASSERT_NUM_ARGS(a, a->count, 1,
+                   "Function \"init\" passed incorrect number of arguments. "
+                   "Got %i, but expected %i.",
+                   a->count, 1);
 
   // Check if argument is a Q-Expression
   LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
-          "Function \"init\" passed incorrect type. Expected Q-Expression.");
+          "Function \"init\" passed incorrect type for argument 0. "
+          "Got %s, but expected %s.",
+          ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
 
   // Check if argument is not an empty Q-Expr
-  LASSERT_EMPTY(
-      a, a->cell[0]->count,
-      "Function \"init\" passed {}. Expected non-empty Q-Expression.");
+  LASSERT_EMPTY(a, a->cell[0]->count,
+                "Function \"init\" passed {}. Expected non-empty %s.",
+                ltype_name(LVAL_QEXPR));
 
   // Take first argument
   lval* x = lval_take(a, 0);
@@ -655,32 +711,37 @@ static lval* builtin_init(lenv* e, lval* a) {
   return x;
 }
 
-static lval* builtin_def(lenv* e, lval* v) {
+static lval* builtin_def(lenv* e, lval* a) {
   // Check if argument is a Q-Expression
-  LASSERT(v, v->cell[0]->type == LVAL_QEXPR,
-          "Function \"def\" passed incorrect type. Expected Q-Expression.");
+  LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
+          "Function \"def\" passed incorrect type for argument 0. "
+          "Got %s, but expected %s.",
+          ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
 
   // First argument is the symbol list
-  lval* syms = v->cell[0];
+  lval* syms = a->cell[0];
 
   // Ensure all elements of first list are symbols
   for (int i = 0; i < syms->count; i++) {
-    LASSERT(v, syms->cell[i]->type == LVAL_SYM,
-            "Function \"def\" cannot define non-symbol.");
+    LASSERT(a, syms->cell[i]->type == LVAL_SYM,
+            "Function \"def\" cannot define non-symbol. Got %s for element %i.",
+            ltype_name(syms->cell[i]->type), i);
   }
 
   // Check correct number of symbols and values
   // (the first argument is the symbol list)
-  LASSERT(v, syms->count == v->count - 1,
+  LASSERT(a, syms->count == a->count - 1,
           "Function \"def\" cannot define incorrect "
-          "number of values to symbols.");
+          "number of values to symbols. Got %i %s for %i %s.",
+          syms->count, syms->count > 1 ? "symbols" : "symbol", a->count - 1,
+          a->count - 1 > 1 ? "values" : "value");
 
   // Assign copies of values to symbols
   for (int i = 0; i < syms->count; i++) {
-    lenv_put(e, syms->cell[i], v->cell[i + 1]);
+    lenv_put(e, syms->cell[i], a->cell[i + 1]);
   }
 
-  lval_del(v);
+  lval_del(a);
 
   return lval_sexpr();
 }
