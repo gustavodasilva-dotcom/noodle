@@ -53,12 +53,22 @@ void add_history(char* unused) {}
     return err;                                                  \
   }
 
-#define LASSERT_NONEMPTY(func, a, n)                                          \
+#define LASSERT_NONEMPTY(f, a, n)                                             \
   if (a->cell[n]->count == 0) {                                               \
     lval* err = lval_err("Function \"%s\" passed {}. Expected non-empty %s.", \
-                         func, ltype_name(LVAL_QEXPR));                       \
+                         f, ltype_name(LVAL_QEXPR));                          \
     lval_del(a);                                                              \
     return err;                                                               \
+  }
+
+#define LASSERT_TYPE(f, a, n, t)                                  \
+  if (a->cell[n]->type != t) {                                    \
+    lval* err = lval_err(                                         \
+        "Function \"%s\" passed incorrect type for argument %i. " \
+        "Got %s, but expected %s.",                               \
+        f, n, ltype_name(a->cell[n]->type), ltype_name(t));       \
+    lval_del(a);                                                  \
+    return err;                                                   \
   }
 
 // Lisp value
@@ -550,10 +560,7 @@ static lval* builtin_head(lenv* e, lval* a) {
   LASSERT_NUM("head", a, 1);
 
   // Check if single argument is a Q-Expression
-  LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
-          "Function \"head\" passed incorrect type for argument 0. "
-          "Got %s, but expected %s.",
-          ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
+  LASSERT_TYPE("head", a, 0, LVAL_QEXPR);
 
   // Check if single argument is not empty
   LASSERT_NONEMPTY("head", a, 0);
@@ -574,10 +581,7 @@ static lval* builtin_tail(lenv* e, lval* a) {
   LASSERT_NUM("tail", a, 1);
 
   // Check if single argument is a Q-Expression
-  LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
-          "Function \"tail\" passed incorrect type for argument 0. "
-          "Got %s, but expected %s.",
-          ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
+  LASSERT_TYPE("tail", a, 0, LVAL_QEXPR);
 
   // Check if single argument is not empty
   LASSERT_NONEMPTY("tail", a, 0);
@@ -604,10 +608,7 @@ static lval* builtin_eval(lenv* e, lval* a) {
   LASSERT_NUM("eval", a, 1);
 
   // Check if single argument is a Q-Expression
-  LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
-          "Function \"eval\" passed incorrect type for argument 0. "
-          "Got %s, but expected %s.",
-          ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
+  LASSERT_TYPE("eval", a, 0, LVAL_QEXPR);
 
   // Otherwise take first (single) argument
   lval* x = lval_take(a, 0);
@@ -619,10 +620,7 @@ static lval* builtin_eval(lenv* e, lval* a) {
 static lval* builtin_join(lenv* e, lval* a) {
   // Check if all arguments are Q-Expressions
   for (int i = 0; i < a->count; i++) {
-    LASSERT(a, a->cell[i]->type == LVAL_QEXPR,
-            "Function \"join\" passed incorrect type for argument %i. "
-            "Got %s, but expected %s.",
-            i, ltype_name(a->cell[i]->type), ltype_name(LVAL_QEXPR));
+    LASSERT_TYPE("join", a, i, LVAL_QEXPR);
   }
 
   // Take first argument
@@ -653,10 +651,7 @@ static lval* builtin_cons(lenv* e, lval* a) {
           ltype_name(LVAL_QEXPR), ltype_name(LVAL_NUM));
 
   // Check if the second argument is a Q-Expression
-  LASSERT(a, a->cell[1]->type == LVAL_QEXPR,
-          "Function \"cons\" passed incorrect type for argument 1. "
-          "Got %s, but expected %s.",
-          ltype_name(a->cell[1]->type), ltype_name(LVAL_QEXPR));
+  LASSERT_TYPE("cons", a, 1, LVAL_QEXPR);
 
   // Create result Q-Expression
   lval* r = lval_qexpr();
@@ -675,10 +670,7 @@ static lval* builtin_len(lenv* e, lval* a) {
   LASSERT_NUM("len", a, 1);
 
   // Check if argument is a Q-Expression
-  LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
-          "Function \"len\" passed incorrect type for argument 0. "
-          "Got %s, but expected %s.",
-          ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
+  LASSERT_TYPE("len", a, 0, LVAL_QEXPR);
 
   // Return a number containing the amount of elements
   lval* r = lval_num(a->cell[0]->count);
@@ -691,10 +683,7 @@ static lval* builtin_init(lenv* e, lval* a) {
   LASSERT_NUM("init", a, 1);
 
   // Check if argument is a Q-Expression
-  LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
-          "Function \"init\" passed incorrect type for argument 0. "
-          "Got %s, but expected %s.",
-          ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
+  LASSERT_TYPE("init", a, 0, LVAL_QEXPR);
 
   // Check if argument is not an empty Q-Expr
   LASSERT_NONEMPTY("init", a, 0);
@@ -711,10 +700,7 @@ static lval* builtin_init(lenv* e, lval* a) {
 
 static lval* builtin_def(lenv* e, lval* a) {
   // Check if argument is a Q-Expression
-  LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
-          "Function \"def\" passed incorrect type for argument 0. "
-          "Got %s, but expected %s.",
-          ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
+  LASSERT_TYPE("def", a, 0, LVAL_QEXPR);
 
   // First argument is the symbol list
   lval* syms = a->cell[0];
@@ -775,10 +761,7 @@ static lval* builtin_env(lenv* e, lval* a) {
   LASSERT_NUM("env", a, 1);
 
   // Check if argument is a S-Expression
-  LASSERT(a, a->cell[0]->type == LVAL_SEXPR,
-          "Function \"env\" passed incorrect type for argument 0. "
-          "Got %s, but expected %s.",
-          ltype_name(a->cell[0]->type), ltype_name(LVAL_SEXPR));
+  LASSERT_TYPE("env", a, 0, LVAL_SEXPR);
 
   // Print all variables in the environment
   for (int i = 0; i < e->count; i++) {
