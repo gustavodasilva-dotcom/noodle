@@ -53,11 +53,11 @@ void add_history(char* unused) {}
     return err;                                                  \
   }
 
-#define LASSERT_NOT_EMPTY_QEXPR(func, args, count)                            \
-  if (count == 0) {                                                           \
+#define LASSERT_NONEMPTY(func, a, n)                                          \
+  if (a->cell[n]->count == 0) {                                               \
     lval* err = lval_err("Function \"%s\" passed {}. Expected non-empty %s.", \
                          func, ltype_name(LVAL_QEXPR));                       \
-    lval_del(args);                                                           \
+    lval_del(a);                                                              \
     return err;                                                               \
   }
 
@@ -556,7 +556,7 @@ static lval* builtin_head(lenv* e, lval* a) {
           ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
 
   // Check if single argument is not empty
-  LASSERT_NOT_EMPTY_QEXPR("head", a, a->cell[0]->count);
+  LASSERT_NONEMPTY("head", a, 0);
 
   // Otherwise take first (single) argument
   lval* v = lval_take(a, 0);
@@ -580,7 +580,7 @@ static lval* builtin_tail(lenv* e, lval* a) {
           ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
 
   // Check if single argument is not empty
-  LASSERT_NOT_EMPTY_QEXPR("tail", a, a->cell[0]->count);
+  LASSERT_NONEMPTY("tail", a, 0);
 
   // Otherwise take first (single) argument
   lval* v = lval_take(a, 0);
@@ -697,7 +697,7 @@ static lval* builtin_init(lenv* e, lval* a) {
           ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
 
   // Check if argument is not an empty Q-Expr
-  LASSERT_NOT_EMPTY_QEXPR("init", a, a->cell[0]->count);
+  LASSERT_NONEMPTY("init", a, 0);
 
   // Take first argument
   lval* x = lval_take(a, 0);
