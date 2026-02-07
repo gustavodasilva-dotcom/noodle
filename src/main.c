@@ -36,20 +36,20 @@ void add_history(char* unused) {}
 
 #endif
 
-#define LASSERT(args, cond, fmt, ...)         \
+#define LASSERT(a, cond, fmt, ...)            \
   if (!(cond)) {                              \
     lval* err = lval_err(fmt, ##__VA_ARGS__); \
-    lval_del(args);                           \
+    lval_del(a);                              \
     return err;                               \
   }
 
-#define LASSERT_NUM_ARGS(func, args, count, exp)                 \
-  if (count != exp) {                                            \
+#define LASSERT_NUM(f, a, c)                                     \
+  if (a->count != c) {                                           \
     lval* err = lval_err(                                        \
         "Function \"%s\" passed incorrect number of arguments. " \
         "Got %i, but expected %i.",                              \
-        func, count, exp);                                       \
-    lval_del(args);                                              \
+        f, a->count, c);                                         \
+    lval_del(a);                                                 \
     return err;                                                  \
   }
 
@@ -547,7 +547,7 @@ static lval* builtin_div(lenv* e, lval* a) { return builtin_op(e, a, "/"); }
 
 static lval* builtin_head(lenv* e, lval* a) {
   // Check if argument is a single one
-  LASSERT_NUM_ARGS("head", a, a->count, 1);
+  LASSERT_NUM("head", a, 1);
 
   // Check if single argument is a Q-Expression
   LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
@@ -571,7 +571,7 @@ static lval* builtin_head(lenv* e, lval* a) {
 
 static lval* builtin_tail(lenv* e, lval* a) {
   // Check if argument is a single one
-  LASSERT_NUM_ARGS("tail", a, a->count, 1);
+  LASSERT_NUM("tail", a, 1);
 
   // Check if single argument is a Q-Expression
   LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
@@ -601,7 +601,7 @@ static lval* lval_eval(lenv* e, lval* v);
 
 static lval* builtin_eval(lenv* e, lval* a) {
   // Check if argument is a single one
-  LASSERT_NUM_ARGS("eval", a, a->count, 1);
+  LASSERT_NUM("eval", a, 1);
 
   // Check if single argument is a Q-Expression
   LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
@@ -641,7 +641,7 @@ static lval* builtin_join(lenv* e, lval* a) {
 
 static lval* builtin_cons(lenv* e, lval* a) {
   // Check if the number of arguments is two
-  LASSERT_NUM_ARGS("cons", a, a->count, 2);
+  LASSERT_NUM("cons", a, 2);
 
   // Check if the second argument is a valid type
   LASSERT(a,
@@ -672,7 +672,7 @@ static lval* builtin_cons(lenv* e, lval* a) {
 
 static lval* builtin_len(lenv* e, lval* a) {
   // Check if argument is a single one
-  LASSERT_NUM_ARGS("len", a, a->count, 1);
+  LASSERT_NUM("len", a, 1);
 
   // Check if argument is a Q-Expression
   LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
@@ -688,7 +688,7 @@ static lval* builtin_len(lenv* e, lval* a) {
 
 static lval* builtin_init(lenv* e, lval* a) {
   // Check if argument is a single one
-  LASSERT_NUM_ARGS("init", a, a->count, 1);
+  LASSERT_NUM("init", a, 1);
 
   // Check if argument is a Q-Expression
   LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
@@ -746,7 +746,7 @@ static lval* builtin_def(lenv* e, lval* a) {
 
 static lval* builtin_exit(lenv* e, lval* a) {
   // Check if argument is a single one
-  LASSERT_NUM_ARGS("exit", a, a->count, 1);
+  LASSERT_NUM("exit", a, 1);
 
   // Check if argument is a valid type
   LASSERT(a, a->cell[0]->type == LVAL_NUM || a->cell[0]->type == LVAL_SEXPR,
@@ -772,7 +772,7 @@ static lval* builtin_exit(lenv* e, lval* a) {
 
 static lval* builtin_env(lenv* e, lval* a) {
   // Check if argument is a single one
-  LASSERT_NUM_ARGS("env", a, a->count, 1);
+  LASSERT_NUM("env", a, 1);
 
   // Check if argument is a S-Expression
   LASSERT(a, a->cell[0]->type == LVAL_SEXPR,
