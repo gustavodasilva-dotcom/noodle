@@ -964,7 +964,7 @@ static lval* builtin_lambda(lenv* e, lval* a) {
   LASSERT_TYPE("\\", a, 1, LVAL_QEXPR);
 
   // Check first Q-Expression contains only symbols
-  for (int i = 0; i < a->count; i++) {
+  for (int i = 0; i < a->cell[0]->count; i++) {
     LASSERT(a, (a->cell[0]->cell[i]->type == LVAL_SYM),
             "Cannot define non-symbol. Got %s, but expected %s.",
             ltype_name(a->cell[0]->cell[i]->type), ltype_name(LVAL_SYM));
@@ -980,6 +980,53 @@ static lval* builtin_lambda(lenv* e, lval* a) {
 
   // Create lambda
   return lval_lambda(formals, body);
+}
+
+static lval* builtin_fun(lenv* e, lval* a) {
+  // Check two arguments, each of which are Q-Expressions
+  LASSERT_NUM("fun", a, 2);
+  LASSERT_TYPE("fun", a, 0, LVAL_QEXPR);
+  LASSERT_TYPE("fun", a, 1, LVAL_QEXPR);
+
+  // Check first Q-Expression has at least two symbols (identifier and formal
+  // argument)
+  LASSERT(a, (a->cell[0]->count >= 2),
+          "Function \"fun\" passed incorrect number of symbols for argument 0. "
+          "Got %i, but expected %i.",
+          a->cell[0]->count, 2);
+
+  // Check first Q-Expression contains only symbols
+  for (int i = 0; i < a->cell[0]->count; i++) {
+    LASSERT(a, (a->cell[0]->cell[i]->type == LVAL_SYM),
+            "Cannot define non-symbol. Got %s, but expected %s.",
+            ltype_name(a->cell[0]->cell[i]->type), ltype_name(LVAL_SYM));
+  }
+
+  // Pop first argument
+  lval* args = lval_pop(a, 0);
+
+  // Pop next argument
+  lval* body = lval_pop(a, 0);
+
+  // Pop first symbol from "args" (the function identifier)
+  lval* k = lval_pop(args, 0);
+
+  // Create lambda with remaining "args" symbol(s) and body
+  lval* lambda = lval_lambda(args, body);
+
+  // Assign lambda to environment
+  lenv_put(e, k, lambda);
+
+  // Delete arguments
+  lval_del(args);
+  lval_del(body);
+
+  // Delete function identifier
+  lval_del(k);
+
+  lval_del(a);
+
+  return lval_sexpr();
 }
 
 static lval* builtin_exit(lenv* e, lval* a) {
@@ -1117,6 +1164,7 @@ void static lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "exit", builtin_exit);
   lenv_add_builtin(e, "env", builtin_env);
   lenv_add_builtin(e, "\\", builtin_lambda);
+  lenv_add_builtin(e, "fun", builtin_fun);
 
   // Mathematical functions
   lenv_add_builtin(e, "+", builtin_add);
