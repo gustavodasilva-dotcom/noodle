@@ -515,6 +515,13 @@ static void lenv_put(lenv* e, lval* k, lval* v);
 
 static lval* builtin_eval(lenv* e, lval* a);
 
+static lval* builtin_list(lenv* e, lval* a);
+
+/// @brief Assembles and evaluates a function call.
+/// @param e The current environment
+/// @param f The function to be called
+/// @param a The arguments to be passed to the function
+/// @return A lval representing the result of the function call
 static lval* lval_call(lenv* e, lval* f, lval* a) {
   // If builtin, then simply apply that
   if (f->builtin) {
@@ -540,6 +547,27 @@ static lval* lval_call(lenv* e, lval* f, lval* a) {
     // Pop the first (i.e next) symbol from the formals
     lval* sym = lval_pop(f->formals, 0);
 
+    // Special case to deal with "&"
+    if (strcmp(sym->sym, "&") == 0) {
+      // Ensure "&" is followed by another symbol
+      if (f->formals->count != 1) {
+        lval_del(a);
+
+        return lval_err(
+            "Function format invalid. "
+            "Symbol \"&\" not followed by single symbol.");
+      }
+
+      // Next formal should be bound to remaining arguments
+      lval* nsym = lval_pop(f->formals, 0);
+      lenv_put(f->env, nsym, builtin_list(e, a));
+
+      lval_del(sym);
+      lval_del(nsym);
+
+      break;
+    }
+
     // Pop the first (i.e next) argument from the list
     lval* val = lval_pop(a, 0);
 
@@ -553,6 +581,30 @@ static lval* lval_call(lenv* e, lval* f, lval* a) {
 
   // Argument list is now bound, so can be cleaned up
   lval_del(a);
+
+  // If "&" remains in formal list, bind to empty list
+  if (f->formals->count > 0 && strcmp(f->formals->cell[0]->sym, "&") == 0) {
+    // Check to ensure that "&" is not passed invalidly
+    if (f->formals->count != 2) {
+      return lval_err(
+          "Function format invalid. "
+          "Symbol \"&\" not followed by single symbol.");
+    }
+
+    // Pop and delete "&" symbol
+    lval_del(lval_pop(f->formals, 0));
+
+    // Pop next symbol and create empty list
+    lval* sym = lval_pop(f->formals, 0);
+    lval* val = lval_qexpr();
+
+    // Bind to environment
+    lenv_put(f->env, sym, val);
+
+    // Delete
+    lval_del(sym);
+    lval_del(val);
+  }
 
   // If all formals have been bound, evaluate
   if (f->formals->count == 0) {
@@ -750,6 +802,10 @@ static lval* builtin_tail(lenv* e, lval* a) {
   return v;
 }
 
+/// @brief Converts a lval to a Q-Expression.
+/// @param e The current environment
+/// @param a The lval to be converted
+/// @return The converted lval
 static lval* builtin_list(lenv* e, lval* a) {
   a->type = LVAL_QEXPR;
 
@@ -758,6 +814,10 @@ static lval* builtin_list(lenv* e, lval* a) {
 
 static lval* lval_eval(lenv* e, lval* v);
 
+/// @brief Evaluates a Q-Expression.
+/// @param e The current environment
+/// @param a The Q-Expression to be evaluated
+/// @return The result of evaluating the Q-Expression
 static lval* builtin_eval(lenv* e, lval* a) {
   // Check if argument is a single one
   LASSERT_NUM("eval", a, 1);
