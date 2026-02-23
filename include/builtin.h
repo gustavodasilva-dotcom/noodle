@@ -36,13 +36,22 @@
     return err;                                                   \
   }
 
+#define LASSERT_TYPE_NUM_SEXPR(f, a, n)                                    \
+  if (!(a->cell[n]->type == LVAL_NUM || a->cell[n]->type == LVAL_SEXPR)) { \
+    lval* err = lval_err(                                                  \
+        "Function \"%s\" passed incorrect type for argument %i. "          \
+        "Got %s, but expected %s or %s.",                                  \
+        f, n, ltype_name(a->cell[n]->type), ltype_name(LVAL_NUM),          \
+        ltype_name(LVAL_SEXPR));                                           \
+    lval_del(a);                                                           \
+    return err;                                                            \
+  }
+
 // Forward declarations
 struct lenv;
 struct lval;
 
 typedef struct lval* (*lbuiltin)(struct lenv*, struct lval*);
-
-struct lval* builtin_op(struct lenv* e, struct lval* a, char* op);
 
 struct lval* builtin_add(struct lenv* e, struct lval* a);
 
@@ -89,5 +98,17 @@ struct lval* builtin_fun(struct lenv* e, struct lval* a);
 struct lval* builtin_exit(struct lenv* e, struct lval* a);
 
 struct lval* builtin_env(struct lenv* e, struct lval* a);
+
+struct lval* builtin_eq(struct lenv* e, struct lval* a);
+
+struct lval* builtin_neq(struct lenv* e, struct lval* a);
+
+struct lval* builtin_gt(struct lenv* e, struct lval* a);
+
+struct lval* builtin_lt(struct lenv* e, struct lval* a);
+
+struct lval* builtin_geq(struct lenv* e, struct lval* a);
+
+struct lval* builtin_leq(struct lenv* e, struct lval* a);
 
 #endif

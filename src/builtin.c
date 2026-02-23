@@ -3,7 +3,7 @@
 #include "lenv.h"
 #include "lval.h"
 
-lval* builtin_op(lenv* e, lval* a, char* op) {
+static lval* builtin_op(lenv* e, lval* a, char* op) {
   // Ensure all arguments are numbers
   for (int i = 0; i < a->count; i++) {
     LASSERT(a, a->cell[i]->type == LVAL_NUM,
@@ -326,11 +326,7 @@ lval* builtin_exit(lenv* e, lval* a) {
   LASSERT_NUM("exit", a, 1);
 
   // Check if argument is a valid type
-  LASSERT(a, a->cell[0]->type == LVAL_NUM || a->cell[0]->type == LVAL_SEXPR,
-          "Function \"exit\" passed incorrect type for argument 0. "
-          "Got %s, but expected %s or %s.",
-          ltype_name(a->cell[0]->type), ltype_name(LVAL_NUM),
-          ltype_name(LVAL_SEXPR));
+  LASSERT_TYPE_NUM_SEXPR("exit", a, 0);
 
   int i = 0;
 
@@ -367,3 +363,48 @@ lval* builtin_env(lenv* e, lval* a) {
 
   return lval_sexpr();
 }
+
+static lval* builtin_ord(lenv* e, lval* a, char* op) {
+  // Check if argument is two
+  LASSERT_NUM(op, a, 2);
+
+  // Check if arguments are a valid type
+  LASSERT_TYPE_NUM_SEXPR(op, a, 0);
+
+  // Check if arguments are a valid type
+  LASSERT_TYPE_NUM_SEXPR(op, a, 1);
+
+  int r;
+
+  if (strcmp(op, "==") == 0) {
+    r = a->cell[0]->num == a->cell[1]->num;
+  } else if (strcmp(op, "!=") == 0) {
+    r = a->cell[0]->num != a->cell[1]->num;
+  } else if (strcmp(op, ">") == 0) {
+    r = a->cell[0]->num > a->cell[1]->num;
+  } else if (strcmp(op, "<") == 0) {
+    r = a->cell[0]->num < a->cell[1]->num;
+  } else if (strcmp(op, ">=") == 0) {
+    r = a->cell[0]->num >= a->cell[1]->num;
+  } else if (strcmp(op, "<=") == 0) {
+    r = a->cell[0]->num <= a->cell[1]->num;
+  } else {
+    return lval_err("Function \"%s\" passed invalid operator.", op);
+  }
+
+  lval_del(a);
+
+  return lval_num(r);
+}
+
+lval* builtin_eq(lenv* e, lval* a) { return builtin_ord(e, a, "=="); }
+
+lval* builtin_neq(lenv* e, lval* a) { return builtin_ord(e, a, "!="); }
+
+lval* builtin_gt(lenv* e, lval* a) { return builtin_ord(e, a, ">"); }
+
+lval* builtin_lt(lenv* e, lval* a) { return builtin_ord(e, a, "<"); }
+
+lval* builtin_geq(lenv* e, lval* a) { return builtin_ord(e, a, ">="); }
+
+lval* builtin_leq(lenv* e, lval* a) { return builtin_ord(e, a, "<="); }
