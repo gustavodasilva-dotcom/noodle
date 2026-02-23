@@ -369,7 +369,7 @@ lval* builtin_env(lenv* e, lval* a) {
 }
 
 static lval* builtin_ord(lenv* e, lval* a, char* op) {
-  // Check two arguments, each of which numbers
+  // Check two arguments, each of which are numbers
   LASSERT_NUM(op, a, 2);
   LASSERT_TYPE(op, a, 0, LVAL_NUM);
   LASSERT_TYPE(op, a, 1, LVAL_NUM);
@@ -475,3 +475,33 @@ static lval* builtin_cmp(lenv* e, lval* a, char* op) {
 lval* builtin_eq(lenv* e, lval* a) { return builtin_cmp(e, a, "=="); }
 
 lval* builtin_ne(lenv* e, lval* a) { return builtin_cmp(e, a, "!="); }
+
+lval* builtin_if(lenv* e, lval* a) {
+  // Check three arguments
+  LASSERT_NUM("if", a, 3);
+
+  // First must be number
+  LASSERT_TYPE("if", a, 0, LVAL_NUM);
+
+  // Second and third must be Q-Expressions
+  LASSERT_TYPE("if", a, 1, LVAL_QEXPR);
+  LASSERT_TYPE("if", a, 2, LVAL_QEXPR);
+
+  // Mark both expressions as evaluable
+  lval* x;
+  a->cell[1]->type = LVAL_SEXPR;
+  a->cell[2]->type = LVAL_SEXPR;
+
+  if (a->cell[0]->num != 0) {
+    // If condition is true, evaluate first expression
+    x = lval_eval(e, lval_pop(a, 1));
+  } else {
+    // Otherwise, evaluate second expression
+    x = lval_eval(e, lval_pop(a, 2));
+  }
+
+  // Delete argument list and return
+  lval_del(a);
+
+  return x;
+}

@@ -100,4 +100,6 @@ struct lval* builtin_eq(struct lenv* e, struct lval* a);
 
 struct lval* builtin_ne(struct lenv* e, struct lval* a);
 
+struct lval* builtin_if(struct lenv* e, struct lval* a);
+
 #endif
