@@ -326,7 +326,11 @@ lval* builtin_exit(lenv* e, lval* a) {
   LASSERT_NUM("exit", a, 1);
 
   // Check if argument is a valid type
-  LASSERT_TYPE_NUM_SEXPR("exit", a, 0);
+  LASSERT(a, a->cell[0]->type == LVAL_NUM || a->cell[0]->type == LVAL_SEXPR,
+          "Function \"exit\" passed incorrect type for argument 0. "
+          "Got %s, but expected %s or %s.",
+          ltype_name(a->cell[0]->type), ltype_name(LVAL_NUM),
+          ltype_name(LVAL_SEXPR));
 
   int i = 0;
 
@@ -365,31 +369,27 @@ lval* builtin_env(lenv* e, lval* a) {
 }
 
 static lval* builtin_ord(lenv* e, lval* a, char* op) {
-  // Check if argument is two
+  // Check two arguments, each of which numbers
   LASSERT_NUM(op, a, 2);
-
-  // Check if arguments are a valid type
-  LASSERT_TYPE_NUM_SEXPR(op, a, 0);
-
-  // Check if arguments are a valid type
-  LASSERT_TYPE_NUM_SEXPR(op, a, 1);
+  LASSERT_TYPE(op, a, 0, LVAL_NUM);
+  LASSERT_TYPE(op, a, 1, LVAL_NUM);
 
   int r;
 
-  if (strcmp(op, "==") == 0) {
-    r = a->cell[0]->num == a->cell[1]->num;
-  } else if (strcmp(op, "!=") == 0) {
-    r = a->cell[0]->num != a->cell[1]->num;
-  } else if (strcmp(op, ">") == 0) {
-    r = a->cell[0]->num > a->cell[1]->num;
-  } else if (strcmp(op, "<") == 0) {
-    r = a->cell[0]->num < a->cell[1]->num;
-  } else if (strcmp(op, ">=") == 0) {
-    r = a->cell[0]->num >= a->cell[1]->num;
-  } else if (strcmp(op, "<=") == 0) {
-    r = a->cell[0]->num <= a->cell[1]->num;
-  } else {
-    return lval_err("Function \"%s\" passed invalid operator.", op);
+  if (strcmp(op, ">") == 0) {
+    r = (a->cell[0]->num > a->cell[1]->num);
+  }
+
+  if (strcmp(op, "<") == 0) {
+    r = (a->cell[0]->num < a->cell[1]->num);
+  }
+
+  if (strcmp(op, ">=") == 0) {
+    r = (a->cell[0]->num >= a->cell[1]->num);
+  }
+
+  if (strcmp(op, "<=") == 0) {
+    r = (a->cell[0]->num <= a->cell[1]->num);
   }
 
   lval_del(a);
@@ -397,14 +397,81 @@ static lval* builtin_ord(lenv* e, lval* a, char* op) {
   return lval_num(r);
 }
 
-lval* builtin_eq(lenv* e, lval* a) { return builtin_ord(e, a, "=="); }
-
-lval* builtin_neq(lenv* e, lval* a) { return builtin_ord(e, a, "!="); }
-
 lval* builtin_gt(lenv* e, lval* a) { return builtin_ord(e, a, ">"); }
 
 lval* builtin_lt(lenv* e, lval* a) { return builtin_ord(e, a, "<"); }
 
-lval* builtin_geq(lenv* e, lval* a) { return builtin_ord(e, a, ">="); }
+lval* builtin_ge(lenv* e, lval* a) { return builtin_ord(e, a, ">="); }
 
-lval* builtin_leq(lenv* e, lval* a) { return builtin_ord(e, a, "<="); }
+lval* builtin_le(lenv* e, lval* a) { return builtin_ord(e, a, "<="); }
+
+static int lval_eq(lval* x, lval* y) {
+  // Different types are always unequal
+  if (x->type != y->type) {
+    return 0;
+  }
+
+  // Compare based upon type
+  switch (x->type) {
+    // Compare number values
+    case LVAL_NUM:
+      return (x->num == y->num);
+
+    // Compare string values
+    case LVAL_ERR:
+      return (strcmp(x->err, y->err) == 0);
+    case LVAL_SYM:
+      return (strcmp(x->sym, y->sym) == 0);
+
+    // If builtin, compare; otherwise, compare formals and body
+    case LVAL_FUN:
+      if (x->builtin || y->builtin) {
+        return x->builtin == y->builtin;
+      } else {
+        return lval_eq(x->formals, y->formals) && lval_eq(x->body, y->body);
+      }
+
+    // If list, compare every individual element
+    case LVAL_QEXPR:
+    case LVAL_SEXPR:
+      if (x->count != y->count) {
+        return 0;
+      }
+
+      for (int i = 0; i < x->count; i++) {
+        // If any element not equal, then whole list not equal
+        if (!lval_eq(x->cell[i], y->cell[i])) {
+          return 0;
+        }
+      }
+
+      // Otherwise, list must be equal
+      return 1;
+      break;
+  }
+
+  return 0;
+}
+
+static lval* builtin_cmp(lenv* e, lval* a, char* op) {
+  // Check two arguments
+  LASSERT_NUM(op, a, 2);
+
+  int r;
+
+  if (strcmp(op, "==") == 0) {
+    r = lval_eq(a->cell[0], a->cell[1]);
+  }
+
+  if (strcmp(op, "!=") == 0) {
+    r = !lval_eq(a->cell[0], a->cell[1]);
+  }
+
+  lval_del(a);
+
+  return lval_num(r);
+}
+
+lval* builtin_eq(lenv* e, lval* a) { return builtin_cmp(e, a, "=="); }
+
+lval* builtin_ne(lenv* e, lval* a) { return builtin_cmp(e, a, "!="); }
