@@ -394,7 +394,7 @@ static lval* builtin_ord(lenv* e, lval* a, char* op) {
 
   lval_del(a);
 
-  return lval_num(r);
+  return lval_bool(r);
 }
 
 lval* builtin_gt(lenv* e, lval* a) { return builtin_ord(e, a, ">"); }
@@ -415,6 +415,7 @@ static int lval_eq(lval* x, lval* y) {
   switch (x->type) {
     // Compare number values
     case LVAL_NUM:
+    case LVAL_BOOL:
       return (x->num == y->num);
 
     // Compare string values
@@ -469,7 +470,7 @@ static lval* builtin_cmp(lenv* e, lval* a, char* op) {
 
   lval_del(a);
 
-  return lval_num(r);
+  return lval_bool(r);
 }
 
 lval* builtin_eq(lenv* e, lval* a) { return builtin_cmp(e, a, "=="); }
@@ -524,7 +525,7 @@ lval* builtin_or(lenv* e, lval* a) {
     lval_del(a);
 
     // Return true
-    return lval_num(1);
+    return lval_bool(1);
   }
 
   // Otherwise, evaluate right side
@@ -535,14 +536,14 @@ lval* builtin_or(lenv* e, lval* a) {
     lval_del(a);
 
     // Return true
-    return lval_num(1);
+    return lval_bool(1);
   }
 
   // Delete
   lval_del(a);
 
   // Return false
-  return lval_num(0);
+  return lval_bool(0);
 }
 
 lval* builtin_and(lenv* e, lval* a) {
@@ -567,7 +568,7 @@ lval* builtin_and(lenv* e, lval* a) {
   // Delete
   lval_del(a);
 
-  return lval_num(r);
+  return lval_bool(r);
 }
 
 lval* builtin_not(lenv* e, lval* a) {
@@ -586,5 +587,5 @@ lval* builtin_not(lenv* e, lval* a) {
   // Delete
   lval_del(a);
 
-  return lval_num(!x->num);
+  return lval_bool(!x->num);
 }

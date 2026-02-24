@@ -35,6 +35,7 @@ struct lval {
 enum {
   LVAL_ERR,
   LVAL_NUM,
+  LVAL_BOOL,
   LVAL_SYM,
   LVAL_FUN,
   LVAL_SEXPR,
@@ -48,6 +49,11 @@ char* ltype_name(int t);
 /// @param x The number value
 /// @return A pointer to the newly created lval of type number.
 lval* lval_num(long x);
+
+/// @brief Constructor for boolean type.
+/// @param b The boolean value
+/// @return A pointer to the newly created lval of type boolean.
+lval* lval_bool(int b);
 
 /// @brief Constructor for error type.
 /// @param fmt The format string for the error message
