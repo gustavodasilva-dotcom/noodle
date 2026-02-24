@@ -522,7 +522,7 @@ lval* builtin_or(lenv* e, lval* a) {
   if (x->num != 0) {
     // If not false, delete
     lval_del(a);
-    
+
     // Return true
     return lval_num(1);
   }
@@ -568,4 +568,23 @@ lval* builtin_and(lenv* e, lval* a) {
   lval_del(a);
 
   return lval_num(r);
+}
+
+lval* builtin_not(lenv* e, lval* a) {
+  // Check if argument is a single one
+  LASSERT_NUM("!", a, 1);
+
+  // Check it's a Q-Expression
+  LASSERT_TYPE("!", a, 0, LVAL_QEXPR);
+
+  // Mark expression as evaluable
+  a->cell[0]->type = LVAL_SEXPR;
+
+  // Evaluate expression
+  lval* x = lval_eval(e, lval_pop(a, 0));
+
+  // Delete
+  lval_del(a);
+
+  return lval_num(!x->num);
 }

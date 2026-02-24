@@ -146,4 +146,5 @@ void lenv_add_builtins(lenv* e) {
   // Logical operators
   lenv_add_builtin(e, "||", builtin_or);
   lenv_add_builtin(e, "&&", builtin_and);
+  lenv_add_builtin(e, "!", builtin_not);
 }
