@@ -520,23 +520,52 @@ lval* builtin_or(lenv* e, lval* a) {
   lval* x = lval_eval(e, lval_pop(a, 0));
 
   if (x->num != 0) {
-    // Delete and return
+    // If not false, delete
     lval_del(a);
     
+    // Return true
     return lval_num(1);
   }
 
-  // Evaluate remaining (right side)
+  // Otherwise, evaluate right side
   lval* y = lval_eval(e, lval_pop(a, 0));
 
   if (y->num != 0) {
-    // Delete and return
+    // If not false, delete
     lval_del(a);
 
+    // Return true
     return lval_num(1);
   }
 
+  // Delete
   lval_del(a);
 
+  // Return false
   return lval_num(0);
+}
+
+lval* builtin_and(lenv* e, lval* a) {
+  // Check two arguments, each of which are Q-Expressions
+  LASSERT_NUM("||", a, 2);
+  LASSERT_TYPE("||", a, 0, LVAL_QEXPR);
+  LASSERT_TYPE("||", a, 1, LVAL_QEXPR);
+
+  // Mark both expressions as evaluable
+  a->cell[0]->type = LVAL_SEXPR;
+  a->cell[1]->type = LVAL_SEXPR;
+
+  // Evaluate left side
+  lval* x = lval_eval(e, lval_pop(a, 0));
+
+  // Evaluate right side
+  lval* y = lval_eval(e, lval_pop(a, 0));
+
+  // Check if both sides are not false
+  int r = x->num != 0 && y->num != 0;
+
+  // Delete
+  lval_del(a);
+
+  return lval_num(r);
 }

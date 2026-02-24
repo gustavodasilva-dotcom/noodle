@@ -104,4 +104,6 @@ struct lval* builtin_if(struct lenv* e, struct lval* a);
 
 struct lval* builtin_or(struct lenv* e, struct lval* a);
 
+struct lval* builtin_and(struct lenv* e, struct lval* a);
+
 #endif
