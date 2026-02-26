@@ -18,6 +18,7 @@ struct lval {
   long num;
   char* err;
   char* sym;
+  char* str;
 
   // Function
   lbuiltin builtin;
@@ -37,6 +38,7 @@ enum {
   LVAL_NUM,
   LVAL_BOOL,
   LVAL_SYM,
+  LVAL_STR,
   LVAL_FUN,
   LVAL_SEXPR,
   LVAL_QEXPR,
@@ -65,6 +67,11 @@ lval* lval_err(char* fmt, ...);
 /// @param s The symbol value
 /// @return A pointer to the newly created lval of type symbol.
 lval* lval_sym(char* s);
+
+/// @brief Constructor for string type.
+/// @param s The string value
+/// @return A pointer to the newly created lval of type string.
+lval* lval_str(char* s);
 
 /// @brief Constructor for builtin function type.
 /// @param func The builtin function value
@@ -96,12 +103,6 @@ lval* lval_exit(int i);
 /// @brief Free a lval and all its associated memory.
 /// @param v The lval
 void lval_del(lval* v);
-
-/// @brief Read a number from an AST node and convert it to a lval.
-/// @param t The AST node containing the number
-/// @return A pointer to the newly created lval of type number, or an error
-/// lval if the conversion fails.
-lval* lval_read_num(mpc_ast_t* t);
 
 /// @brief Read an AST node and convert it to a lval.
 /// @param t The AST node to read
@@ -135,6 +136,8 @@ lval* lval_take(lval* v, int i);
 lval* lval_join(lval* x, lval* y);
 
 lval* lval_copy(lval* v);
+
+int lval_eq(lval* x, lval* y);
 
 /// @brief Assembles and evaluates a function call.
 /// @param e The current environment

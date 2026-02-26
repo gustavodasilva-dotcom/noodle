@@ -17,6 +17,8 @@ char* ltype_name(int t) {
       return "Error";
     case LVAL_SYM:
       return "Symbol";
+    case LVAL_STR:
+      return "String";
     case LVAL_SEXPR:
       return "S-Expression";
     case LVAL_QEXPR:
@@ -64,6 +66,15 @@ lval* lval_sym(char* s) {
   v->type = LVAL_SYM;
   v->sym = malloc(strlen(s) + 1);
   strcpy(v->sym, s);
+
+  return v;
+}
+
+lval* lval_str(char* s) {
+  lval* v = malloc(sizeof(lval));
+  v->type = LVAL_STR;
+  v->str = malloc(strlen(s) + 1);
+  strcpy(v->str, s);
 
   return v;
 }
@@ -141,6 +152,10 @@ void lval_del(lval* v) {
       free(v->sym);
       break;
 
+    case LVAL_STR:
+      free(v->str);
+      break;
+
     case LVAL_QEXPR:
     case LVAL_SEXPR:
       for (int i = 0; i < v->count; i++) {
@@ -164,12 +179,32 @@ void lval_del(lval* v) {
   free(v);
 }
 
-lval* lval_read_num(mpc_ast_t* t) {
+static lval* lval_read_num(mpc_ast_t* t) {
   errno = 0;
 
   long x = strtol(t->contents, NULL, 10);
 
   return errno != ERANGE ? lval_num(x) : lval_err("invalid number");
+}
+
+static lval* lval_read_str(mpc_ast_t* t) {
+  // Cut off the final quote character
+  t->contents[strlen(t->contents) - 1] = '\0';
+
+  // Copy the string missing out the first quote character
+  char* unescaped = malloc(strlen(t->contents + 1) + 1);
+  strcpy(unescaped, t->contents + 1);
+
+  // Pass through the unescape function
+  unescaped = mpcf_unescape(unescaped);
+
+  // Construct a new lval using the string
+  lval* str = lval_str(unescaped);
+
+  // Free the string and return
+  free(unescaped);
+
+  return str;
 }
 
 lval* lval_read(mpc_ast_t* t) {
@@ -179,6 +214,10 @@ lval* lval_read(mpc_ast_t* t) {
 
   if (strstr(t->tag, "symbol")) {
     return lval_sym(t->contents);
+  }
+
+  if (strstr(t->tag, "string")) {
+    return lval_read_str(t);
   }
 
   lval* x = NULL;
@@ -306,6 +345,12 @@ lval* lval_copy(lval* v) {
       strcpy(x->sym, v->sym);
       break;
 
+    // Copy string using malloc and strcpy
+    case LVAL_STR:
+      x->str = malloc(strlen(v->str) + 1);
+      strcpy(x->str, v->str);
+      break;
+
     // Allocate enough memory and copy each element (recursively)
     case LVAL_SEXPR:
     case LVAL_QEXPR:
@@ -321,9 +366,56 @@ lval* lval_copy(lval* v) {
   return x;
 }
 
-lval* builtin_eval(lenv* e, lval* a);  // TODO: remove once properly defined.
+int lval_eq(lval* x, lval* y) {
+  // Different types are always unequal
+  if (x->type != y->type) {
+    return 0;
+  }
 
-lval* builtin_list(lenv* e, lval* a);  // TODO: remove once properly defined.
+  // Compare based upon type
+  switch (x->type) {
+    // Compare number values
+    case LVAL_NUM:
+    case LVAL_BOOL:
+      return (x->num == y->num);
+
+    // Compare string values
+    case LVAL_ERR:
+      return (strcmp(x->err, y->err) == 0);
+    case LVAL_SYM:
+      return (strcmp(x->sym, y->sym) == 0);
+    case LVAL_STR:
+      return (strcmp(x->str, y->str) == 0);
+
+    // If builtin, compare; otherwise, compare formals and body
+    case LVAL_FUN:
+      if (x->builtin || y->builtin) {
+        return x->builtin == y->builtin;
+      } else {
+        return lval_eq(x->formals, y->formals) && lval_eq(x->body, y->body);
+      }
+
+    // If list, compare every individual element
+    case LVAL_QEXPR:
+    case LVAL_SEXPR:
+      if (x->count != y->count) {
+        return 0;
+      }
+
+      for (int i = 0; i < x->count; i++) {
+        // If any element not equal, then whole list not equal
+        if (!lval_eq(x->cell[i], y->cell[i])) {
+          return 0;
+        }
+      }
+
+      // Otherwise, list must be equal
+      return 1;
+      break;
+  }
+
+  return 0;
+}
 
 lval* lval_call(lenv* e, lval* f, lval* a) {
   // If builtin, then simply apply that
@@ -485,6 +577,21 @@ lval* lval_eval(lenv* e, lval* v) {
   return v;
 }
 
+static void lval_print_str(lval* v) {
+  // Make a copy of the string
+  char* escaped = malloc(strlen(v->str) + 1);
+  strcpy(escaped, v->str);
+
+  // Pass it through the escape function
+  escaped = mpcf_escape(escaped);
+
+  // Print it between " characters
+  printf("\"%s\"", escaped);
+
+  // Free the copied string
+  free(escaped);
+}
+
 void lval_print(lval* v) {
   switch (v->type) {
     case LVAL_NUM:
@@ -505,6 +612,10 @@ void lval_print(lval* v) {
 
     case LVAL_SYM:
       printf("%s", v->sym);
+      break;
+
+    case LVAL_STR:
+      lval_print_str(v);
       break;
 
     case LVAL_FUN:

@@ -405,55 +405,6 @@ lval* builtin_ge(lenv* e, lval* a) { return builtin_ord(e, a, ">="); }
 
 lval* builtin_le(lenv* e, lval* a) { return builtin_ord(e, a, "<="); }
 
-static int lval_eq(lval* x, lval* y) {
-  // Different types are always unequal
-  if (x->type != y->type) {
-    return 0;
-  }
-
-  // Compare based upon type
-  switch (x->type) {
-    // Compare number values
-    case LVAL_NUM:
-    case LVAL_BOOL:
-      return (x->num == y->num);
-
-    // Compare string values
-    case LVAL_ERR:
-      return (strcmp(x->err, y->err) == 0);
-    case LVAL_SYM:
-      return (strcmp(x->sym, y->sym) == 0);
-
-    // If builtin, compare; otherwise, compare formals and body
-    case LVAL_FUN:
-      if (x->builtin || y->builtin) {
-        return x->builtin == y->builtin;
-      } else {
-        return lval_eq(x->formals, y->formals) && lval_eq(x->body, y->body);
-      }
-
-    // If list, compare every individual element
-    case LVAL_QEXPR:
-    case LVAL_SEXPR:
-      if (x->count != y->count) {
-        return 0;
-      }
-
-      for (int i = 0; i < x->count; i++) {
-        // If any element not equal, then whole list not equal
-        if (!lval_eq(x->cell[i], y->cell[i])) {
-          return 0;
-        }
-      }
-
-      // Otherwise, list must be equal
-      return 1;
-      break;
-  }
-
-  return 0;
-}
-
 static lval* builtin_cmp(lenv* e, lval* a, char* op) {
   // Check two arguments
   LASSERT_NUM(op, a, 2);
