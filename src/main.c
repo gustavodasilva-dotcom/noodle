@@ -38,6 +38,7 @@ int main(int argc, char** argv) {
   mpc_parser_t* Number = mpc_new("number");
   mpc_parser_t* Symbol = mpc_new("symbol");
   mpc_parser_t* String = mpc_new("string");
+  mpc_parser_t* Comment = mpc_new("comment");
   mpc_parser_t* Sexpr = mpc_new("sexpr");
   mpc_parser_t* Qexpr = mpc_new("qexpr");
   mpc_parser_t* Expr = mpc_new("expr");
@@ -48,16 +49,17 @@ int main(int argc, char** argv) {
 
   mpca_lang(
       MPCA_LANG_DEFAULT,
-      "												\
-			number		: /-?[0-9]+/ ;						\
-			symbol		: /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&|]+/ ;			\
-			string		: /\"(\\\\.|[^\"])*\"/ ;				\
-			sexpr		: '(' <expr>* ')' ; 					\
-			qexpr		: '{' <expr>* '}' ;					\
-			expr		: <number> | <symbol> | <string> | <sexpr> | <qexpr> ;	\
-			noodle		: /^/ <expr>* /$/ ;					\
+      "														\
+			number		: /-?[0-9]+/ ;								\
+			symbol		: /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&|]+/ ;					\
+			string		: /\"(\\\\.|[^\"])*\"/ ;						\
+			comment		: /;[^\\r\\n]*/ ;							\
+			sexpr		: '(' <expr>* ')' ; 							\
+			qexpr		: '{' <expr>* '}' ;							\
+			expr		: <number> | <symbol> | <string> | <comment> | <sexpr> | <qexpr> ;	\
+			noodle		: /^/ <expr>* /$/ ;							\
 		",
-      Number, Symbol, String, Sexpr, Qexpr, Expr, Noodle);
+      Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, Noodle);
 
   lenv* e = lenv_new();
   lenv_add_builtins(e);
@@ -97,7 +99,7 @@ int main(int argc, char** argv) {
 
   lenv_del(e);
 
-  mpc_cleanup(7, Number, Symbol, String, Sexpr, Qexpr, Expr, Noodle);
+  mpc_cleanup(8, Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, Noodle);
 
   return status;
 }

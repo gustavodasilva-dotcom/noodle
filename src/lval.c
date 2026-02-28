@@ -255,6 +255,10 @@ lval* lval_read(mpc_ast_t* t) {
       continue;
     }
 
+    if (strstr(t->children[i]->tag, "comment")) {
+      continue;
+    }
+
     x = lval_add(x, lval_read(t->children[i]));
   }
 
