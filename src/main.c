@@ -34,18 +34,24 @@ void add_history(char* unused) {}
 
 #endif
 
-int main(int argc, char** argv) {
-  mpc_parser_t* Number = mpc_new("number");
-  mpc_parser_t* Symbol = mpc_new("symbol");
-  mpc_parser_t* String = mpc_new("string");
-  mpc_parser_t* Comment = mpc_new("comment");
-  mpc_parser_t* Sexpr = mpc_new("sexpr");
-  mpc_parser_t* Qexpr = mpc_new("qexpr");
-  mpc_parser_t* Expr = mpc_new("expr");
-  mpc_parser_t* Noodle = mpc_new("noodle");
+mpc_parser_t* Number;
+mpc_parser_t* Symbol;
+mpc_parser_t* String;
+mpc_parser_t* Comment;
+mpc_parser_t* Sexpr;
+mpc_parser_t* Qexpr;
+mpc_parser_t* Expr;
+mpc_parser_t* Noodle;
 
-  puts("Noodle Version 0.0.0.0.1");
-  puts("Press Ctrl+C to Exit\n");
+int main(int argc, char** argv) {
+  Number = mpc_new("number");
+  Symbol = mpc_new("symbol");
+  String = mpc_new("string");
+  Comment = mpc_new("comment");
+  Sexpr = mpc_new("sexpr");
+  Qexpr = mpc_new("qexpr");
+  Expr = mpc_new("expr");
+  Noodle = mpc_new("noodle");
 
   mpca_lang(
       MPCA_LANG_DEFAULT,
@@ -66,35 +72,64 @@ int main(int argc, char** argv) {
 
   int status = 0;
 
-  int running = 1;
+  // Supplied with list of files
+  if (argc >= 2) {
+    // Loop over each supplied filename (starting from 1)
+    for (int i = 1; i < argc; i++) {
+      // Argument list with a single argument, the filename
+      lval* args = lval_add(lval_sexpr(), lval_str(argv[i]));
 
-  while (running) {
-    char* input = readline("noodle> ");
+      // Pass to builtin load and get the result
+      lval* x = builtin_load(e, args);
 
-    add_history(input);
-
-    mpc_result_t r;
-
-    if (mpc_parse("<stdin>", input, Noodle, &r)) {
-      lval* x = lval_eval(e, lval_read(r.output));
-
+      // If the result in an exit, break loop
       if (x->type == LVAL_EXIT) {
         status = x->num;
+        lval_del(x);
+        break;
+      }
 
-        running = 0;
-      } else {
+      // If the result is an error, print it
+      if (x->type == LVAL_ERR) {
         lval_println(x);
       }
 
       lval_del(x);
-
-      mpc_ast_delete(r.output);
-    } else {
-      mpc_err_print(r.error);
-      mpc_err_delete(r.error);
     }
+  } else {
+    puts("Noodle Version 0.0.0.0.1");
+    puts("Press Ctrl+C to Exit\n");
 
-    free(input);
+    int running = 1;
+
+    while (running) {
+      char* input = readline("noodle> ");
+
+      add_history(input);
+
+      mpc_result_t r;
+
+      if (mpc_parse("<stdin>", input, Noodle, &r)) {
+        lval* x = lval_eval(e, lval_read(r.output));
+
+        if (x->type == LVAL_EXIT) {
+          status = x->num;
+
+          running = 0;
+        } else {
+          lval_println(x);
+        }
+
+        lval_del(x);
+
+        mpc_ast_delete(r.output);
+      } else {
+        mpc_err_print(r.error);
+        mpc_err_delete(r.error);
+      }
+
+      free(input);
+    }
   }
 
   lenv_del(e);

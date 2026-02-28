@@ -2,6 +2,7 @@
 
 #include "lenv.h"
 #include "lval.h"
+#include "parser.h"
 
 static lval* builtin_op(lenv* e, lval* a, char* op) {
   // Ensure all arguments are numbers
@@ -539,4 +540,84 @@ lval* builtin_not(lenv* e, lval* a) {
   lval_del(a);
 
   return lval_bool(!x->num);
+}
+
+lval* builtin_load(lenv* e, lval* a) {
+  // Check if argument is a single one
+  LASSERT_NUM("load", a, 1);
+
+  // Check it's a string
+  LASSERT_TYPE("load", a, 0, LVAL_STR);
+
+  // Parse file given by string name
+  mpc_result_t r;
+  if (mpc_parse_contents(a->cell[0]->str, Noodle, &r)) {
+    // Read contents
+    lval* expr = lval_read(r.output);
+    mpc_ast_delete(r.output);
+
+    // Evaluate each expression
+    while (expr->count) {
+      lval* x = lval_eval(e, lval_pop(expr, 0));
+
+      // If evaluation leads to error, print it
+      if (x->type == LVAL_ERR) {
+        lval_println(x);
+      }
+
+      // Delete
+      lval_del(x);
+    }
+
+    // Delete expressions and arguments
+    lval_del(expr);
+    lval_del(a);
+
+    // Return empty list
+    return lval_sexpr();
+  } else {
+    // Get parser error as string
+    char* err_msg = mpc_err_string(r.error);
+    mpc_err_delete(r.error);
+
+    // Create new error message using it
+    lval* err = lval_err("Could not load library %s", err_msg);
+    free(err_msg);
+    lval_del(a);
+
+    // Cleanup and return error
+    return err;
+  }
+}
+
+lval* builtin_error(lenv* e, lval* a) {
+  // Check if argument is a single one
+  LASSERT_NUM("error", a, 1);
+
+  // Check it's an error
+  LASSERT_TYPE("error", a, 0, LVAL_STR);
+
+  // Construct error from first argument
+  lval* err = lval_err(a->cell[0]->str);
+
+  // Delete arguments
+  lval_del(a);
+
+  return err;
+}
+
+lval* builtin_print(lenv* e, lval* a) {
+  // Print each argument followed by a space
+  for (int i = 0; i < a->count; i++) {
+    lval_print(a->cell[i]);
+    putchar(' ');
+  }
+
+  // Print newline
+  putchar('\n');
+
+  // Delete arguments
+  lval_del(a);
+
+  return lval_sexpr();
 }

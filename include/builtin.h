@@ -108,4 +108,10 @@ struct lval* builtin_and(struct lenv* e, struct lval* a);
 
 struct lval* builtin_not(struct lenv* e, struct lval* a);
 
+struct lval* builtin_load(struct lenv* e, struct lval* a);
+
+struct lval* builtin_error(struct lenv* e, struct lval* a);
+
+struct lval* builtin_print(struct lenv* e, struct lval* a);
+
 #endif

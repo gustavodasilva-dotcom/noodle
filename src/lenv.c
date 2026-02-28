@@ -161,4 +161,9 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "||", builtin_or);
   lenv_add_builtin(e, "&&", builtin_and);
   lenv_add_builtin(e, "!", builtin_not);
+
+  // String functions
+  lenv_add_builtin(e, "load", builtin_load);
+  lenv_add_builtin(e, "error", builtin_error);
+  lenv_add_builtin(e, "print", builtin_print);
 }
