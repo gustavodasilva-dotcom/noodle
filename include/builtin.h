@@ -50,6 +50,8 @@ struct lval* builtin_mul(struct lenv* e, struct lval* a);
 
 struct lval* builtin_div(struct lenv* e, struct lval* a);
 
+struct lval* builtin_mod(struct lenv* e, struct lval* a);
+
 struct lval* builtin_head(struct lenv* e, struct lval* a);
 
 struct lval* builtin_tail(struct lenv* e, struct lval* a);
