@@ -77,16 +77,16 @@ lval* builtin_mod(lenv* e, lval* a) { return builtin_op(e, a, "%"); }
 
 lval* builtin_pow(lenv* e, lval* a) { return builtin_op(e, a, "^"); }
 
-lval* builtin_min(lenv* e, lval* a) {
+static lval* builtin_agg(lenv* e, lval* a, char* op) {
   // Check if argument count is at least one
   LASSERT(a, a->count > 0,
-          "Function \"min\" passed incorrect number of arguments. Got %i, but "
+          "Function \"%s\" passed incorrect number of arguments. Got %i, but "
           "expected more than zero.",
-          a->count);
+          op, a->count);
 
   // Check if every argument is a number
   for (int i = 0; i < a->count; i++) {
-    LASSERT_TYPE("min", a, i, LVAL_NUM);
+    LASSERT_TYPE(op, a, i, LVAL_NUM);
   }
 
   // Take first argument
@@ -96,8 +96,15 @@ lval* builtin_min(lenv* e, lval* a) {
     // Take next argument
     lval* y = lval_pop(a, 0);
 
-    // Update x if y is smaller
-    x = x->num > y->num ? y : x;
+    if (strcmp(op, "min") == 0) {
+      // Update x if y is smaller
+      x = x->num > y->num ? y : x;
+    }
+
+    if (strcmp(op, "max") == 0) {
+      // Update x if y is larger
+      x = x->num > y->num ? x : y;
+    }
   }
 
   // Delete
@@ -105,6 +112,10 @@ lval* builtin_min(lenv* e, lval* a) {
 
   return x;
 }
+
+lval* builtin_min(lenv* e, lval* a) { return builtin_agg(e, a, "min"); }
+
+lval* builtin_max(lenv* e, lval* a) { return builtin_agg(e, a, "max"); }
 
 lval* builtin_head(lenv* e, lval* a) {
   // Check if argument is a single one
