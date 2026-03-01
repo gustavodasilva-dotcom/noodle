@@ -53,6 +53,10 @@ static lval* builtin_op(lenv* e, lval* a, char* op) {
       x->num %= y->num;
     }
 
+    if (strcmp(op, "^") == 0) {
+      x->num = pow(x->num, y->num);
+    }
+
     lval_del(y);
   }
 
@@ -70,6 +74,8 @@ lval* builtin_mul(lenv* e, lval* a) { return builtin_op(e, a, "*"); }
 lval* builtin_div(lenv* e, lval* a) { return builtin_op(e, a, "/"); }
 
 lval* builtin_mod(lenv* e, lval* a) { return builtin_op(e, a, "%"); }
+
+lval* builtin_pow(lenv* e, lval* a) { return builtin_op(e, a, "^"); }
 
 lval* builtin_head(lenv* e, lval* a) {
   // Check if argument is a single one
