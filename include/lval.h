@@ -36,7 +36,6 @@ struct lval {
 enum {
   LVAL_ERR,
   LVAL_NUM,
-  LVAL_BOOL,
   LVAL_SYM,
   LVAL_STR,
   LVAL_FUN,

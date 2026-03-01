@@ -395,7 +395,7 @@ static lval* builtin_ord(lenv* e, lval* a, char* op) {
 
   lval_del(a);
 
-  return lval_bool(r);
+  return lval_num(r);
 }
 
 lval* builtin_gt(lenv* e, lval* a) { return builtin_ord(e, a, ">"); }
@@ -422,7 +422,7 @@ static lval* builtin_cmp(lenv* e, lval* a, char* op) {
 
   lval_del(a);
 
-  return lval_bool(r);
+  return lval_num(r);
 }
 
 lval* builtin_eq(lenv* e, lval* a) { return builtin_cmp(e, a, "=="); }
@@ -477,7 +477,7 @@ lval* builtin_or(lenv* e, lval* a) {
     lval_del(a);
 
     // Return true
-    return lval_bool(1);
+    return lval_num(1);
   }
 
   // Otherwise, evaluate right side
@@ -488,14 +488,14 @@ lval* builtin_or(lenv* e, lval* a) {
     lval_del(a);
 
     // Return true
-    return lval_bool(1);
+    return lval_num(1);
   }
 
   // Delete
   lval_del(a);
 
   // Return false
-  return lval_bool(0);
+  return lval_num(0);
 }
 
 lval* builtin_and(lenv* e, lval* a) {
@@ -520,7 +520,7 @@ lval* builtin_and(lenv* e, lval* a) {
   // Delete
   lval_del(a);
 
-  return lval_bool(r);
+  return lval_num(r);
 }
 
 lval* builtin_not(lenv* e, lval* a) {
@@ -539,7 +539,7 @@ lval* builtin_not(lenv* e, lval* a) {
   // Delete
   lval_del(a);
 
-  return lval_bool(!x->num);
+  return lval_num(!x->num);
 }
 
 lval* builtin_load(lenv* e, lval* a) {

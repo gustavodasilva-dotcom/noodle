@@ -11,8 +11,6 @@ char* ltype_name(int t) {
       return "Function";
     case LVAL_NUM:
       return "Number";
-    case LVAL_BOOL:
-      return "Boolean";
     case LVAL_ERR:
       return "Error";
     case LVAL_SYM:
@@ -79,14 +77,6 @@ lval* lval_str(char* s) {
   return v;
 }
 
-lval* lval_bool(int b) {
-  lval* v = malloc(sizeof(lval));
-  v->type = LVAL_BOOL;
-  v->num = b;
-
-  return v;
-}
-
 lval* lval_fun(lbuiltin func) {
   lval* v = malloc(sizeof(lval));
   v->type = LVAL_FUN;
@@ -141,7 +131,6 @@ lval* lval_exit(int i) {
 void lval_del(lval* v) {
   switch (v->type) {
     case LVAL_NUM:
-    case LVAL_BOOL:
       break;
 
     case LVAL_ERR:
@@ -333,7 +322,6 @@ lval* lval_copy(lval* v) {
 
     // Copy number directly
     case LVAL_NUM:
-    case LVAL_BOOL:
       x->num = v->num;
       break;
 
@@ -380,7 +368,6 @@ int lval_eq(lval* x, lval* y) {
   switch (x->type) {
     // Compare number values
     case LVAL_NUM:
-    case LVAL_BOOL:
       return (x->num == y->num);
 
     // Compare string values
@@ -600,14 +587,6 @@ void lval_print(lval* v) {
   switch (v->type) {
     case LVAL_NUM:
       printf("%li", v->num);
-      break;
-
-    case LVAL_BOOL:
-      if (v->num != 0) {
-        printf("true");
-      } else {
-        printf("false");
-      }
       break;
 
     case LVAL_ERR:

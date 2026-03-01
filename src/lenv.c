@@ -95,16 +95,6 @@ lenv* lenv_copy(lenv* e) {
   return n;
 }
 
-static void lenv_add_boolean(lenv* e, char* name, int b) {
-  lval* k = lval_sym(name);
-  lval* v = lval_bool(b);
-
-  lenv_put(e, k, v);
-
-  lval_del(k);
-  lval_del(v);
-}
-
 static void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
   lval* k = lval_sym(name);
   lval* v = lval_fun(func);
@@ -116,10 +106,6 @@ static void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
 }
 
 void lenv_add_builtins(lenv* e) {
-  // Add boolean variables
-  lenv_add_boolean(e, "true", 1);
-  lenv_add_boolean(e, "false", 0);
-
   // Environment functions
   lenv_add_builtin(e, "env", builtin_env);
   lenv_add_builtin(e, "exit", builtin_exit);
