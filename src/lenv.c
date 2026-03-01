@@ -135,6 +135,7 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "/", builtin_div);
   lenv_add_builtin(e, "%", builtin_mod);
   lenv_add_builtin(e, "^", builtin_pow);
+  lenv_add_builtin(e, "min", builtin_min);
 
   // Comparison functions
   lenv_add_builtin(e, "if", builtin_if);

@@ -77,6 +77,35 @@ lval* builtin_mod(lenv* e, lval* a) { return builtin_op(e, a, "%"); }
 
 lval* builtin_pow(lenv* e, lval* a) { return builtin_op(e, a, "^"); }
 
+lval* builtin_min(lenv* e, lval* a) {
+  // Check if argument count is at least one
+  LASSERT(a, a->count > 0,
+          "Function \"min\" passed incorrect number of arguments. Got %i, but "
+          "expected more than zero.",
+          a->count);
+
+  // Check if every argument is a number
+  for (int i = 0; i < a->count; i++) {
+    LASSERT_TYPE("min", a, i, LVAL_NUM);
+  }
+
+  // Take first argument
+  lval* x = lval_pop(a, 0);
+
+  while (a->count) {
+    // Take next argument
+    lval* y = lval_pop(a, 0);
+
+    // Update x if y is smaller
+    x = x->num > y->num ? y : x;
+  }
+
+  // Delete
+  lval_del(a);
+
+  return x;
+}
+
 lval* builtin_head(lenv* e, lval* a) {
   // Check if argument is a single one
   LASSERT_NUM("head", a, 1);

@@ -54,6 +54,8 @@ struct lval* builtin_mod(struct lenv* e, struct lval* a);
 
 struct lval* builtin_pow(struct lenv* e, struct lval* a);
 
+struct lval* builtin_min(struct lenv* e, struct lval* a);
+
 struct lval* builtin_head(struct lenv* e, struct lval* a);
 
 struct lval* builtin_tail(struct lenv* e, struct lval* a);
